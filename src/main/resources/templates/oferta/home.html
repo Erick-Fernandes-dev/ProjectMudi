@@ -1,0 +1,130 @@
+<html>
+	<head th:replace="~{base :: head}"></head>
+	<body onload="onLoad()">
+		<div th:replace="~{base :: logo}"></div>
+	
+		<div class="container" id="ofertas">
+			<div th:replace="~{base :: titulo('Faça sua Oferta')}"></div>
+						
+			<div class="card mb-3" v-for="pedido in pedidos">
+				<div class="card-header alert-dark">{{pedido.nomeProduto}}</div>
+				<div class="card-body">
+					<div class="row">
+						<div class="col-12 col-sm-8  mb-3">
+							<div>Produto</div>
+							<!--                          Acessando a url do produto  -->							
+							<div> <a v-bind:href="pedido.urlProduto">{{pedido.nomeProduto}}</a></div>
+							
+							<div>Descrição</div>
+							<div>
+								<textarea disabled="disabled" class="form-control">{{pedido.descricao}}</textarea>
+							</div>
+							<div class="row mt-3">
+							
+								<!-- v-model -> vincula valores da classes -->
+								<div class="col-md-5">
+									Valor: <input v-bind:class="{'is-invalid':pedido.erros.valor !== ''}" class="form-control" v-model="pedido.valorNegociado"/>
+									
+									<div v-if="pedido.erros.valor" class="invalid-feedback" >
+										{{pedido.erros.valor}}
+									</div>
+									
+								</div>
+								
+								<div class="col-md-7">
+								<!-- v-bind:class =>  ocê consegue adicionar uma classe e que você pode passar aqui o valor dela, ="{‘is-invalid':}", caso um determinado valor for verdadeiro. -->
+									Data da entrega: <input v-bind:class="{'is-invalid':pedido.erros.dataDaEntrega !== ''}" class="form-control" v-model="pedido.dataDaEntrega"/>
+									
+									<div v-if="pedido.erros.dataDaEntrega" class="invalid-feedback">
+										{{pedido.erros.dataDaEntrega}}
+									</div>
+									
+								</div>
+								
+							</div>
+							
+							<div class="mt-2">
+								<label>Comentário</label>
+								<textarea class="form-control" v-model=pedido.comentario></textarea>
+							</div>
+							
+							<button v-if="pedido.ofertaEnviada" class="btn btn-success mt-2">Oferta Enviada</button>
+							<button v-else v-on:click="enviarOferta(pedido)" class="btn btn-primary mt-2">Enviar Oferta</button>
+							
+						</div>
+						<div class="col-12 col-sm-4">
+							<div>
+								<img class="img-thumbnail" v-bind:src="pedido.urlImagem"/>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<script>
+			//Quando a pagina for carregada gera automaticamente
+			function onLoad() {
+				var app = new Vue(
+				{
+					el : '#ofertas',
+					//Meus Dados
+					data : {
+						pedidos : []
+					},
+					
+					//ele é chamado automaticamente, logo depois que Vue renderiza o HTML aí ele chama 
+					// automaticamente o mounted
+					mounted () {
+						//requisição feita com o AXIOS
+						axios//é uma lib que vé feita para consumir uma api
+						
+						// Consumir uma api através de sua url
+					      .get('http://localhost:8080/api/pedidos/aguardando')
+					      .then(response => {
+					    	  	response.data.forEach(pedido => {
+					    	  		pedido.ofertaEnviada = false;
+					    	  		pedido.erros = {
+					    	  				valor: '',
+					    	  				dataDaEntrega: ''
+					    	  		}
+					    	  		
+					    	  		
+					    	  	})
+					    	 	this.pedidos = response.data
+					    	})
+					},
+					//onde vou colocar todos os métodos
+					methods: {
+						enviarOferta: function(pedido) {
+							//limpar os erros mostrado ao cliente
+							pedido.erros = {
+			    	  			valor: '',
+			    	  			dataDaEntrega: ''
+			    	  		};
+							
+							axios
+							// requisição post, vai adicionar
+						      .post('http://localhost:8080/api/ofertas', {
+						    	  // Valores que serão mapeados
+						    	  pedidoId: pedido.id,
+						    	  valor: pedido.valorNegociado,
+						    	  dataDaEntrega: pedido.dataDaEntrega,
+						    	  comentario: pedido.comentario
+						      })
+						      .then(response => pedido.ofertaEnviada = true)
+						      //vai pegar o conteúdo do erro
+						      .catch(error => {
+						    	  error.response.data.errors.forEach(error => {
+						    		  pedido.erros[error.field] = error.defaultMessage;
+						    	  })
+						      })
+						} 
+					}
+				});
+			}
+		</script>
+		<!-- Importando o VueJS -->
+		<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+		<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+	</body>
+</html>
